@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="排课管理系统 - 教育培训排课管理工具">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="排课助手">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="icons/icon-114.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="icons/icon-76.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="icons/icon-72.png">
+    
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-startup-image" href="icons/icon-512.png">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <title>排课管理系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- iOS安全区域适配 -->
+    <style>
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .top-bar { padding-top: env(safe-area-inset-top); }
+            .tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+            .modal { max-height: calc(85vh - env(safe-area-inset-bottom)); }
+        }
+        
+        /* iOS PWA全屏模式下的状态栏适配 */
+        body { padding-top: env(safe-area-inset-top); }
+        
+        /* 安装提示条 */
+        .install-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #3B82F6, #6366F1);
+            color: #fff;
+            padding: 12px 16px;
+            padding-top: calc(12px + env(safe-area-inset-top));
+            z-index: 999;
+            animation: slideDown 0.3s ease;
+        }
+        .install-banner.show { display: block; }
+        .install-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .install-banner-text { flex: 1; font-size: 13px; }
+        .install-banner-text b { display: block; font-size: 14px; margin-bottom: 2px; }
+        .install-banner-btn {
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .install-banner-close {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* iOS底部安全区域 */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .fab { bottom: calc(76px + env(safe-area-inset-bottom)); }
+        }
+    </style>
+</head>
+<body>
+    <!-- iOS安装提示 -->
+    <div class="install-banner" id="install-banner">
+        <div class="install-banner-content">
+            <div class="install-banner-text">
+                <b>添加到主屏幕</b>
+                点击下方按钮安装到iPhone
+            </div>
+            <button class="install-banner-btn" onclick="showInstallGuide()">安装</button>
+            <button class="install-banner-close" onclick="dismissInstall()">✕</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <!-- 底部导航 -->
+        <nav class="tab-bar">
+            <div class="tab active" data-tab="home">
+                <span class="tab-icon">🏠</span>
+                <span class="tab-label">首页</span>
+            </div>
+            <div class="tab" data-tab="schedule">
+                <span class="tab-icon">📅</span>
+                <span class="tab-label">课表</span>
+            </div>
+            <div class="tab tab-center" data-tab="addcourse">
+                <span class="tab-icon-add">＋</span>
+                <span class="tab-label">记一笔</span>
+            </div>
+            <div class="tab" data-tab="stats">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">统计</span>
+            </div>
+            <div class="tab" data-tab="settings">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">设置</span>
+            </div>
+        </nav>
+
+        <!-- ========== 首页 ========== -->
+        <div class="page active" id="page-home">
+            <header class="top-bar">
+                <h2>排课助手</h2>
+            </header>
+            <div class="home-scroll">
+                <!-- 本月统计卡片 -->
+                <div class="home-stat-card">
+                    <div class="home-stat-row">
+                        <div class="home-stat-item">
+                            <div class="home-stat-value" id="home-month-hours">0小时</div>
+                            <div class="home-stat-label">本月课时</div>
+                        </div>
+                        <div class="home-stat-item">
+                            <div class="home-stat-value" id="home-month-income">¥0</div>
+                            <div class="home-stat-label">本月收入</div>
+                        </div>
+                    </div>
+                    <div class="home-stat-sub">
+                        <span class="settled">已结算 <b id="home-settled">¥0</b></span>
+                        <span class="pending">待结算 <b id="home-pending">¥0</b></span>
+                    </div>
+                </div>
+
+                <!-- 课程表管理入口 -->
+                <div class="home-entry-card" onclick="switchTab('schedule')">
+                    <span class="entry-icon">📅</span>
+                    <span class="entry-text">课程表管理</span>
+                    <span class="entry-arrow">›</span>
+                </div>
+
+                <!-- 日历 -->
+                <div class="calendar-card">
+                    <div class="calendar-header">
+                        <button class="btn-icon" onclick="calendarPrev()">◀</button>
+                        <span id="calendar-title">2026年5月</span>
+                        <button class="btn-icon" onclick="calendarNext()">▶</button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+
+                <!-- 今日课程 -->
+                <div class="today-section">
+                    <h3>今日课程</h3>
+                    <div id="today-courses"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 课表页 ========== -->
+        <div class="page" id="page-schedule">
+            <header class="top-bar">
+                <button class="btn-icon" onclick="prevWeek()">◀</button>
+                <h2 id="current-week">本周</h2>
+                <button class="btn-icon" onclick="nextWeek()">▶</button>
+                <button class="btn-sm" onclick="goToday()">今天</button>
+            </header>
+            <div class="schedule-scroll">
+                <table class="schedule-grid" id="schedule-grid">
+                    <thead>
+                        <tr>
+                            <th class="time-col">时间</th>
+                            <th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th><th>日</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-body"></tbody>
+                </table>
+            </div>
+            <button class="fab" onclick="openAddCourse()" title="临时加课">＋<span style="font-size:10px;display:block;line-height:1">加课</span></button>
+        </div>
+
+        <!-- ========== 记一笔页 ========== -->
+        <div class="page" id="page-addcourse">
+            <header class="top-bar"><h2>记一笔</h2></header>
+            <div class="addcourse-scroll">
+                <div class="form-card">
+                    <div class="form-group">
+                        <label>课程类型</label>
+                        <select id="ac-type">
+                            <option value="1v1">一对一</option>
+                            <option value="class">班课</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>上课日期</label>
+                        <input type="date" id="ac-date">
+                    </div>
+                    <div class="form-group">
+                        <label>课时时长（小时）</label>
+                        <input type="number" id="ac-duration" value="2" min="0.5" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>教学机构</label>
+                        <select id="ac-institution"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>学生</label>
+                        <select id="ac-student"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>开始时间</label>
+                        <input type="time" id="ac-start" value="09:00" onchange="autoSetEndTimeAC()">
+                    </div>
+                    <div class="form-group">
+                        <label>结束时间</label>
+                        <input type="time" id="ac-end" value="11:00">
+                    </div>
+                    <div class="form-group">
+                        <label>课时费（元）</label>
+                        <input type="number" id="ac-fee" placeholder="系统自动计算，可手动调整" step="1">
+                        <div class="form-hint">系统已自动计算课时费，可根据实际情况调整</div>
+                    </div>
+                    <div class="form-group">
+                        <label>备注（选填）</label>
+                        <input type="text" id="ac-note" placeholder="请输入备注信息">
+                    </div>
+                    <div class="form-group">
+                        <label>课后反馈（选填）</label>
+                        <div class="feedback-row">
+                            <button class="btn-sm" style="background:var(--primary)" onclick="autoFeedback()">自动生成</button>
+                        </div>
+                        <textarea id="ac-feedback" rows="3" placeholder="可使用自动生成课后反馈，也可手动输入"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>结算状态</label>
+                        <select id="ac-settled">
+                            <option value="0">待结算</option>
+                            <option value="1">已结算</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px">
+                            <input type="checkbox" id="ac-recurring" onchange="toggleACRecurring()" style="width:auto"> 设为循环课程
+                        </label>
+                    </div>
+                    <div id="ac-recurring-fields" style="display:none">
+                        <div class="form-group">
+                            <label>循环频率</label>
+                            <select id="ac-frequency">
+                                <option value="weekly">每周</option>
+                                <option value="biweekly">隔周</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>循环截止</label>
+                            <select id="ac-end-mode" onchange="toggleACEndMode()">
+                                <option value="weeks">按周数</option>
+                                <option value="date">按日期</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="ac-weeks-field">
+                            <label>循环周数</label>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <input type="number" id="ac-weeks" value="8" min="1" max="52" style="width:80px">
+                                <span style="font-size:13px;color:var(--text-secondary)">周</span>
+                            </div>
+                        </div>
+                        <div class="form-group" id="ac-date-field" style="display:none">
+                            <label>截止日期</label>
+                            <input type="date" id="ac-end-date">
+                        </div>
+                    </div>
+                </div>
+                <button class="btn primary full-btn" onclick="saveFromAddCourse()">保存</button>
+            </div>
+        </div>
+
+        <!-- ========== 统计页 ========== -->
+        <div class="page" id="page-stats">
+            <header class="top-bar"><h2>统计</h2></header>
+            <div class="stats-scroll">
+                <!-- 时间维度切换 -->
+                <div class="stats-tabs">
+                    <span class="stats-tab active" data-range="month" onclick="switchStatsRange('month')">按月</span>
+                    <span class="stats-tab" data-range="week" onclick="switchStatsRange('week')">按周</span>
+                    <span class="stats-tab" data-range="year" onclick="switchStatsRange('year')">按年</span>
+                    <span class="stats-tab" data-range="custom" onclick="switchStatsRange('custom')">自定义</span>
+                </div>
+                <div class="stats-filter-row">
+                    <span id="stats-period-label">2026-05</span>
+                    <span id="stats-inst-label">全部机构 ▾</span>
+                </div>
+                <!-- 自定义日期范围 -->
+                <div class="stats-custom-range" id="stats-custom-range" style="display:none">
+                    <input type="date" id="stats-custom-start">
+                    <span>至</span>
+                    <input type="date" id="stats-custom-end">
+                    <button class="btn-sm" onclick="refreshStats()">查询</button>
+                </div>
+
+                <!-- 统计子标签 -->
+                <div class="stats-sub-tabs">
+                    <span class="stats-sub-tab active" onclick="switchStatsView('overview')">总体统计</span>
+                    <span class="stats-sub-tab" onclick="switchStatsView('student')">学生统计</span>
+                    <span class="stats-sub-tab" onclick="switchStatsView('income')">收入分析</span>
+                </div>
+
+                <!-- 总体统计 -->
+                <div id="stats-overview">
+                    <div class="stats-summary-card" id="stats-summary-card">
+                        <div class="stats-summary-top">
+                            <div class="stats-summary-title">总体统计 <span id="stats-summary-period"></span></div>
+                            <button class="stats-collapse-btn" id="stats-collapse-btn" onclick="toggleStatsSummary()">收起</button>
+                        </div>
+                        <div class="stats-summary-income">本期总收入 <b id="stats-total-income">¥0</b></div>
+                        <div class="stats-summary-grid" id="stats-summary-grid">
+                            <div><b id="stats-s1">0</b><br><small>总课时</small></div>
+                            <div><b id="stats-s2">0小时</b><br><small>总时长</small></div>
+                            <div><b id="stats-s3">0天</b><br><small>活跃天数</small></div>
+                            <div><b id="stats-s4">¥0</b><br><small>日均收入</small></div>
+                        </div>
+                        <div class="stats-income-goal-link" onclick="setIncomeGoal()">🎯 设置本月收入目标</div>
+                    </div>
+
+                    <!-- 班型结构 -->
+                    <div class="stats-section">
+                        <h3>🌸 班型结构 <span id="stats-class-total">0节</span></h3>
+                        <div class="stats-bar-row">
+                            <span>一对一课程</span>
+                            <div class="stats-bar"><div class="stats-bar-fill" id="bar-1v1" style="width:0%"></div></div>
+                            <span id="stats-1v1-count">0节·0%</span>
+                        </div>
+                        <div class="stats-bar-row">
+                            <span>班课课程</span>
+                            <div class="stats-bar"><div class="stats-bar-fill" id="bar-class" style="width:0%"></div></div>
+                            <span id="stats-class-count">0节·0%</span>
+                        </div>
+                    </div>
+
+                    <!-- 收入来源 -->
+                    <div class="stats-section">
+                        <h3>💡 收入来源</h3>
+                        <div class="stats-sub-section">
+                            <h4>按学生（Top4）</h4>
+                            <div id="stats-by-student"></div>
+                        </div>
+                        <div class="stats-sub-section">
+                            <h4>按机构（Top4）</h4>
+                            <div id="stats-by-inst"></div>
+                        </div>
+                    </div>
+
+                    <!-- 本周快报 -->
+                    <div class="stats-section" id="stats-weekly-report">
+                        <h3>📅 本周快报</h3>
+                        <div id="stats-weekly-content"></div>
+                    </div>
+                </div>
+
+                <!-- 学生统计 -->
+                <div id="stats-student" style="display:none">
+                    <div id="stats-student-list"></div>
+                </div>
+
+                <!-- 收入分析 -->
+                <div id="stats-income" style="display:none">
+                    <div id="stats-income-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 设置页 ========== -->
+        <div class="page" id="page-settings">
+            <header class="top-bar"><h2>设置</h2></header>
+            <div class="settings-scroll">
+                <!-- 个人信息 -->
+                <div class="settings-profile" onclick="editProfile()">
+                    <div class="profile-avatar" id="profile-avatar">👤</div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="profile-name">未设置昵称</div>
+                        <div class="profile-sub">点击设置个人信息</div>
+                    </div>
+                    <span class="entry-arrow">›</span>
+                </div>
+
+                <!-- 功能列表 -->
+                <div class="settings-list">
+                    <div class="settings-item" onclick="openInstitutionManage()">
+                        <span class="settings-icon">🏢</span>
+                        <span class="settings-text">机构管理</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <div class="settings-item" onclick="openStudentArchives()">
+                        <span class="settings-icon">👥</span>
+                        <span class="settings-text">学生档案</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <div class="settings-item" onclick="openFeeSettings()">
+                        <span class="settings-icon">💰</span>
+                        <span class="settings-text">课时费设置</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <div class="settings-item" onclick="openRecurringManage()">
+                        <span class="settings-icon">🔄</span>
+                        <span class="settings-text">循环课程管理</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <div class="settings-item" onclick="openExport()">
+                        <span class="settings-icon">📊</span>
+                        <span class="settings-text">导出数据</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <div class="settings-item" onclick="BackupDB.exportAll()">
+                        <span class="settings-icon">💾</span>
+                        <span class="settings-text">备份数据库</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                    <label class="settings-item">
+                        <span class="settings-icon">📂</span>
+                        <span class="settings-text">恢复数据</span>
+                        <input type="file" accept=".db" onchange="restoreBackup(this)" style="display:none">
+                        <span class="entry-arrow">›</span>
+                    </label>
+                    <div class="settings-item" onclick="openHistoryPage()">
+                        <span class="settings-icon">📝</span>
+                        <span class="settings-text">历史记录</span>
+                        <span class="entry-arrow">›</span>
+                    </div>
+                </div>
+                <div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:12px">排课管理系统 v2.1 PWA</div>
+            </div>
+        </div>
+
+        <!-- ========== 历史记录页（子页面） ========== -->
+        <div class="page subpage" id="page-history">
+            <header class="top-bar">
+                <button class="btn-back" onclick="closeSubPage('history')">‹</button>
+                <h2>历史记录</h2>
+            </header>
+            <div class="history-scroll">
+                <div class="history-filter">
+                    <div class="history-filter-row">
+                        <input type="date" id="history-start">
+                        <span>至</span>
+                        <input type="date" id="history-end">
+                    </div>
+                    <div class="history-filter-row">
+                        <span>教学机构：</span>
+                        <select id="history-inst"><option value="all">全部</option></select>
+                    </div>
+                    <div class="history-filter-row">
+                        <button class="btn-sm" onclick="refreshHistory()">查询</button>
+                        <button class="btn-sm" style="background:var(--success)" onclick="exportHistory()">导出Excel</button>
+                    </div>
+                </div>
+                <div class="history-view-tabs">
+                    <span class="history-view-tab active" onclick="switchHistoryView('list')">列表</span>
+                    <span class="history-view-tab" onclick="switchHistoryView('week')">按周</span>
+                </div>
+                <div id="history-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== 机构管理页（子页面） ========== -->
+        <div class="page subpage" id="page-inst-manage">
+            <header class="top-bar">
+                <button class="btn-back" onclick="closeSubPage('inst-manage')">‹</button>
+                <h2>机构管理</h2>
+            </header>
+            <div class="inst-manage-scroll">
+                <div class="inst-stats-row">
+                    <span class="inst-stat-badge active-badge" id="inst-active-count">0 活跃</span>
+                    <span class="inst-stat-badge disabled-badge" id="inst-disabled-count">0 禁用</span>
+                    <span class="inst-stat-badge all-badge" id="inst-all-count">0 全部</span>
+                    <button class="btn-sm" style="margin-left:auto" onclick="openInstitutionForm()">＋添加</button>
+                </div>
+                <div id="inst-manage-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== 学生档案页（子页面） ========== -->
+        <div class="page subpage" id="page-student-archives">
+            <header class="top-bar">
+                <button class="btn-back" onclick="closeSubPage('student-archives')">‹</button>
+                <h2>学生档案</h2>
+            </header>
+            <div class="archives-scroll">
+                <div class="archives-header">
+                    <div class="archives-title">学生档案 <span id="archives-count">0人</span></div>
+                    <div class="archives-desc">把分散在记录和统计里的学生信息集中起来</div>
+                    <button class="btn-sm" style="margin-top:8px;background:var(--primary);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px" onclick="openStudentForm()">＋ 新增学生</button>
+                </div>
+                <!-- 日期范围筛选 -->
+                <div class="archives-date-filter">
+                    <input type="date" id="archives-date-start">
+                    <span>至</span>
+                    <input type="date" id="archives-date-end">
+                    <button class="btn-sm" onclick="filterStudentArchives()">筛选</button>
+                </div>
+                <div class="archives-search">
+                    <input type="text" id="archives-search-input" placeholder="搜索学生姓名">
+                    <button class="btn-sm" onclick="searchStudents()">搜索</button>
+                </div>
+                <div class="archives-filter">
+                    <span>教学机构</span>
+                    <select id="archives-inst" onchange="filterStudentArchives()"><option value="all">全部</option></select>
+                </div>
+                <div class="archives-sort">
+                    <button class="archives-sort-btn active" data-sort="recent" onclick="sortStudentArchives('recent')">最近上课</button>
+                    <button class="archives-sort-btn" data-sort="income" onclick="sortStudentArchives('income')">收入最高</button>
+                    <button class="archives-sort-btn" data-sort="hours" onclick="sortStudentArchives('hours')">课时最多</button>
+                    <button class="archives-sort-btn" data-sort="name" onclick="sortStudentArchives('name')">按姓名</button>
+                </div>
+                <div id="archives-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== 课时费设置页（子页面） ========== -->
+        <div class="page subpage" id="page-fee-settings">
+            <header class="top-bar">
+                <button class="btn-back" onclick="closeSubPage('fee-settings')">‹</button>
+                <h2>课时费设置</h2>
+            </header>
+            <div class="fee-settings-scroll">
+                <div class="fee-settings-desc">按年级设置每小时课时费，记录课程时自动计算费用</div>
+                <!-- 机构切换标签 -->
+                <div class="fee-tabs" id="fee-tabs"></div>
+                <!-- 费率列表 -->
+                <div id="fee-settings-list"></div>
+                <!-- 统一设置按钮 -->
+                <div class="fee-batch-btn-row">
+                    <button class="btn primary" onclick="batchSetGradeRate()">⚡ 统一设置所有年级</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 通用弹窗 ========== -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+        <div class="modal" id="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-title">标题</h3>
+                <button class="btn-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- 加载 sql.js -->
+    <script src="lib/sql-wasm.js"></script>
+    <!-- 加载 SheetJS（导出Excel用） -->
+    <script src="lib/xlsx.full.min.js"></script>
+    <!-- 应用逻辑 -->
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- PWA Service Worker -->
+    <script>
+        // 注册Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+        
+        // iOS PWA安装提示
+        let deferredPrompt = null;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                             window.navigator.standalone === true;
+        
+        function checkInstallBanner() {
+            if (isStandalone) return; // 已安装，不显示
+            if (isIOS) {
+                // iOS没有beforeinstallprompt，需要手动提示
+                const dismissed = localStorage.getItem('pwa_install_dismissed');
+                if (!dismissed) {
+                    setTimeout(() => {
+                        document.getElementById('install-banner').classList.add('show');
+                    }, 3000);
+                }
+            }
+        }
+        
+        function showInstallGuide() {
+            alert('安装步骤：\n\n1. 点击Safari底部「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击「添加」确认\n\n添加后可像App一样使用！');
+        }
+        
+        function dismissInstall() {
+            document.getElementById('install-banner').classList.remove('show');
+            localStorage.setItem('pwa_install_dismissed', '1');
+        }
+        
+        // Android PWA安装
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!isIOS && !isStandalone) {
+                const dismissed = localStorage.getItem('pwa_install_dismissed');
+                if (!dismissed) {
+                    setTimeout(() => {
+                        document.getElementById('install-banner').classList.add('show');
+                    }, 3000);
+                }
+            }
+        });
+        
+        // 重写dismissInstall以支持Android
+        const originalDismiss = dismissInstall;
+        window.dismissInstall = function() {
+            if (deferredPrompt) {
+                // Android - 静默忽略
+                document.getElementById('install-banner').classList.remove('show');
+            } else {
+                originalDismiss();
+            }
+        };
+        
+        // 首次加载检查
+        checkInstallBanner();
+    </script>
+</body>
+</html>
